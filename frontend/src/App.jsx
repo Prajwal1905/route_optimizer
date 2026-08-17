@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import MapView from "./MapView";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
 const SAMPLE_ORDERS = [
   { id: "o1", location: { lat: 19.076, lng: 72.8777 }, priority: 2, demand: 1 },
@@ -16,17 +16,17 @@ const SAMPLE_VEHICLES = [
 ];
 
 export default function App() {
-  const [orders] = useState(SAMPLE_ORDERS);
+  const [orders, setOrders] = useState(SAMPLE_ORDERS);
   const [vehicles] = useState(SAMPLE_VEHICLES);
   const [routes, setRoutes] = useState([]);
   const [conflicts, setConflicts] = useState([]);
   const [unassigned, setUnassigned] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const runOptimize = async () => {
+  const runOptimize = async (orderList = orders) => {
     setLoading(true);
     try {
-      const res = await axios.post(`${API_BASE}/optimize`, { orders, vehicles });
+      const res = await axios.post(`${API_BASE}/optimize`, { orders: orderList, vehicles });
       setRoutes(res.data.routes);
       setConflicts(res.data.conflicts);
       setUnassigned(res.data.unassigned_orders);
@@ -38,12 +38,43 @@ export default function App() {
     }
   };
 
+  const simulateNewOrder = async () => {
+    const newOrder = {
+      id: `o${orders.length + 1}`,
+      location: {
+        lat: 19.05 + Math.random() * 0.08,
+        lng: 72.83 + Math.random() * 0.08,
+      },
+      priority: 3,
+      demand: 1,
+    };
+    const updated = [...orders, newOrder];
+    setOrders(updated);
+
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API_BASE}/reroute`, { orders: updated, vehicles });
+      setRoutes(res.data.routes);
+      setConflicts(res.data.conflicts);
+      setUnassigned(res.data.unassigned_orders);
+    } catch (err) {
+      console.error(err);
+      alert("Reroute failed - check backend is running");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{ padding: "20px", fontFamily: "sans-serif" }}>
       <h1>Intelligent Route Optimization System</h1>
 
-      <button onClick={runOptimize} disabled={loading} style={{ padding: "10px 20px", marginBottom: "16px" }}>
+      <button onClick={() => runOptimize()} disabled={loading} style={{ padding: "10px 20px", marginBottom: "16px", marginRight: "10px" }}>
         {loading ? "Optimizing..." : "Run Optimization"}
+      </button>
+
+      <button onClick={simulateNewOrder} disabled={loading || routes.length === 0} style={{ padding: "10px 20px", marginBottom: "16px" }}>
+        Simulate New Order (Dynamic Reroute)
       </button>
 
       {conflicts.length > 0 && (

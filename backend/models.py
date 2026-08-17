@@ -39,6 +39,7 @@ class VehicleRoute(BaseModel):
     stops: list[RouteStop]
     total_distance_km: float
     total_time_minutes: int
+    route_geometry: list[list[float]] = []
 
 
 class OptimizeResponse(BaseModel):

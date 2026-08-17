@@ -2,7 +2,7 @@ from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 
 from models import OptimizeRequest, OptimizeResponse, VehicleRoute, RouteStop, Location
-from distance import build_distance_matrix, build_time_matrix_minutes
+from distance import build_distance_matrix, build_time_matrix_minutes, get_route_geometry
 
 
 def solve_vrp(req: OptimizeRequest) -> OptimizeResponse:
@@ -17,7 +17,7 @@ def solve_vrp(req: OptimizeRequest) -> OptimizeResponse:
     order_start_idx = num_vehicles
 
     dist_matrix = build_distance_matrix(all_locations)
-    time_matrix = build_time_matrix_minutes(dist_matrix)
+    time_matrix = build_time_matrix_minutes(all_locations)
 
     manager = pywrapcp.RoutingIndexManager(
         len(all_locations),
@@ -106,12 +106,25 @@ def solve_vrp(req: OptimizeRequest) -> OptimizeResponse:
                 total_dist += dist_matrix[prev_node][curr_node]
 
             total_time = solution.Value(time_dimension.CumulVar(routing.End(v_idx)))
+
+            route_geometry: list[list[float]] = []
+            if stops:
+                orders_by_id = {o.id: o for o in orders}
+                sorted_stops = sorted(stops, key=lambda s: s.sequence)
+                waypoints = [vehicles[v_idx].start_location] + [
+                    orders_by_id[s.order_id].location for s in sorted_stops
+                ]
+                for i in range(len(waypoints) - 1):
+                    segment = get_route_geometry(waypoints[i], waypoints[i + 1])
+                    route_geometry.extend(segment)
+
             routes.append(
                 VehicleRoute(
                     vehicle_id=vehicles[v_idx].id,
                     stops=stops,
                     total_distance_km=round(total_dist, 2),
                     total_time_minutes=total_time,
+                    route_geometry=route_geometry,
                 )
             )
 

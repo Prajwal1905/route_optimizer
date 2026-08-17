@@ -9,7 +9,21 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-const COLORS = ["#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#46f0f0"];
+const vehicleIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+
+const orderIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+
+const COLORS = ["#3cb44b", "#f58231", "#911eb4", "#46f0f0", "#e6194b", "#4363d8"];
 
 export default function MapView({ orders, vehicles, routes }) {
   const center = vehicles.length
@@ -27,13 +41,13 @@ export default function MapView({ orders, vehicles, routes }) {
       />
 
       {vehicles.map((v) => (
-        <Marker key={v.id} position={[v.start_location.lat, v.start_location.lng]}>
+        <Marker key={v.id} position={[v.start_location.lat, v.start_location.lng]} icon={vehicleIcon}>
           <Popup>Vehicle {v.id} (start)</Popup>
         </Marker>
       ))}
 
       {orders.map((o) => (
-        <Marker key={o.id} position={[o.location.lat, o.location.lng]}>
+        <Marker key={o.id} position={[o.location.lat, o.location.lng]} icon={orderIcon}>
           <Popup>
             Order {o.id} <br />
             Priority: {o.priority}
@@ -45,15 +59,18 @@ export default function MapView({ orders, vehicles, routes }) {
         const vehicle = vehicleById[route.vehicle_id];
         if (!vehicle || route.stops.length === 0) return null;
 
-        const path = [
-          [vehicle.start_location.lat, vehicle.start_location.lng],
-          ...route.stops
-            .sort((a, b) => a.sequence - b.sequence)
-            .map((s) => {
-              const o = orderById[s.order_id];
-              return [o.location.lat, o.location.lng];
-            }),
-        ];
+        const path =
+          route.route_geometry && route.route_geometry.length > 0
+            ? route.route_geometry
+            : [
+                [vehicle.start_location.lat, vehicle.start_location.lng],
+                ...route.stops
+                  .sort((a, b) => a.sequence - b.sequence)
+                  .map((s) => {
+                    const o = orderById[s.order_id];
+                    return [o.location.lat, o.location.lng];
+                  }),
+              ];
 
         return (
           <Polyline

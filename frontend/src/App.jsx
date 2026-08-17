@@ -5,15 +5,35 @@ import MapView from "./MapView";
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
 const SAMPLE_ORDERS = [
-  { id: "o1", location: { lat: 19.076, lng: 72.8777 }, priority: 2, demand: 1 },
-  { id: "o2", location: { lat: 19.0896, lng: 72.8656 }, priority: 3, demand: 1 },
-  { id: "o3", location: { lat: 19.033, lng: 72.8296 }, priority: 1, demand: 1 },
+  { id: "o1", location: { lat: 19.033, lng: 73.0297 }, priority: 2, demand: 1 },
+  {
+    id: "o2",
+    location: { lat: 19.0522, lng: 73.0169 },
+    priority: 3,
+    demand: 1,
+  },
+  {
+    id: "o3",
+    location: { lat: 19.0176, lng: 73.0356 },
+    priority: 1,
+    demand: 1,
+  },
 ];
 
 const SAMPLE_VEHICLES = [
-  { id: "v1", start_location: { lat: 19.0176, lng: 72.8562 }, capacity: 5 },
-  { id: "v2", start_location: { lat: 19.1136, lng: 72.8697 }, capacity: 5 },
+  { id: "v1", start_location: { lat: 19.0728, lng: 73.0055 }, capacity: 5 },
+  { id: "v2", start_location: { lat: 19.0330, lng: 73.0688 }, capacity: 5 },
 ];
+
+const EXTRA_LOCATIONS = [
+  { lat: 19.041, lng: 73.014 }, // Vashi station area
+  { lat: 19.0656, lng: 73.0089 }, // Kopar Khairane
+  { lat: 19.0479, lng: 73.0245 }, // CBD Belapur
+  { lat: 19.0209, lng: 73.0446 }, // Nerul West
+  { lat: 19.0602, lng: 73.018 }, // Sanpada
+];
+
+let extraLocationIndex = 0;
 
 export default function App() {
   const [orders, setOrders] = useState(SAMPLE_ORDERS);
@@ -26,7 +46,10 @@ export default function App() {
   const runOptimize = async (orderList = orders) => {
     setLoading(true);
     try {
-      const res = await axios.post(`${API_BASE}/optimize`, { orders: orderList, vehicles });
+      const res = await axios.post(`${API_BASE}/optimize`, {
+        orders: orderList,
+        vehicles,
+      });
       setRoutes(res.data.routes);
       setConflicts(res.data.conflicts);
       setUnassigned(res.data.unassigned_orders);
@@ -41,19 +64,20 @@ export default function App() {
   const simulateNewOrder = async () => {
     const newOrder = {
       id: `o${orders.length + 1}`,
-      location: {
-        lat: 19.05 + Math.random() * 0.08,
-        lng: 72.83 + Math.random() * 0.08,
-      },
+      location: EXTRA_LOCATIONS[extraLocationIndex % EXTRA_LOCATIONS.length],
       priority: 3,
       demand: 1,
     };
+    extraLocationIndex++;
     const updated = [...orders, newOrder];
     setOrders(updated);
 
     setLoading(true);
     try {
-      const res = await axios.post(`${API_BASE}/reroute`, { orders: updated, vehicles });
+      const res = await axios.post(`${API_BASE}/reroute`, {
+        orders: updated,
+        vehicles,
+      });
       setRoutes(res.data.routes);
       setConflicts(res.data.conflicts);
       setUnassigned(res.data.unassigned_orders);
@@ -69,16 +93,30 @@ export default function App() {
     <div style={{ padding: "20px", fontFamily: "sans-serif" }}>
       <h1>Intelligent Route Optimization System</h1>
 
-      <button onClick={() => runOptimize()} disabled={loading} style={{ padding: "10px 20px", marginBottom: "16px", marginRight: "10px" }}>
+      <button
+        onClick={() => runOptimize()}
+        disabled={loading}
+        style={{
+          padding: "10px 20px",
+          marginBottom: "16px",
+          marginRight: "10px",
+        }}
+      >
         {loading ? "Optimizing..." : "Run Optimization"}
       </button>
 
-      <button onClick={simulateNewOrder} disabled={loading || routes.length === 0} style={{ padding: "10px 20px", marginBottom: "16px" }}>
+      <button
+        onClick={simulateNewOrder}
+        disabled={loading || routes.length === 0}
+        style={{ padding: "10px 20px", marginBottom: "16px" }}
+      >
         Simulate New Order (Dynamic Reroute)
       </button>
 
       {conflicts.length > 0 && (
-        <div style={{ background: "#fee", padding: "10px", marginBottom: "10px" }}>
+        <div
+          style={{ background: "#fee", padding: "10px", marginBottom: "10px" }}
+        >
           <strong>Conflicts:</strong>
           <ul>
             {conflicts.map((c, i) => (
@@ -89,7 +127,9 @@ export default function App() {
       )}
 
       {unassigned.length > 0 && (
-        <div style={{ background: "#ffe", padding: "10px", marginBottom: "10px" }}>
+        <div
+          style={{ background: "#ffe", padding: "10px", marginBottom: "10px" }}
+        >
           <strong>Unassigned orders:</strong> {unassigned.join(", ")}
         </div>
       )}
